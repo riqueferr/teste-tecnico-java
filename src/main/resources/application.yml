@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: cadastro-pessoas
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/cadastro}
+    username: ${DB_USER:cadastro}
+    password: ${DB_PASSWORD:cadastro}
+  web:
+    # mensagens de validação em português mesmo sem Accept-Language (ex.: curl puro)
+    locale: pt_BR
+    locale-resolver: fixed
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+app:
+  auth:
+    # sem default de propósito: a aplicação deve falhar ao subir sem credenciais configuradas
+    user: ${APP_AUTH_USER}
+    password-hash: ${APP_AUTH_PASSWORD_HASH}
+    jwt-secret: ${APP_AUTH_JWT_SECRET}
+    token-ttl: 1h
+    rate-limit:
+      tentativas: 5
+      janela: 60s
+  nationalize:
+    base-url: https://api.nationalize.io
+    timeout: 3s
+
+springdoc:
+  default-produces-media-type: application/json
+  swagger-ui:
+    urls-primary-name: v1

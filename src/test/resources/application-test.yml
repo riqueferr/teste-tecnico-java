@@ -1,0 +1,7 @@
+app:
+  auth:
+    user: admin
+    jwt-secret: segredo-de-teste-com-no-minimo-32-caracteres
+    # password-hash é injetado por ContextoDeTeste
+    rate-limit:
+      tentativas: 1000   # folgado: só o RateLimitLoginTest usa um limite baixo

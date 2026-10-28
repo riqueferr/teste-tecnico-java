@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro de Pessoas</title>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#5b6678; --pri:#2457d6; --err:#b42318; --ok:#067647; --bd:#d9dee7; --on-pri:#fff; --on-err:#fff; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0f141c; --card:#171e29; --txt:#e8ecf3; --mut:#9aa6b8; --pri:#6b95ff; --err:#ff8a80; --ok:#5fd4a0; --bd:#2a3444; --on-pri:#0f141c; --on-err:#0f141c; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:16px; background:var(--bg); color:var(--txt); font:16px/1.45 system-ui, sans-serif; }
+    main { max-width: 880px; margin: 0 auto; display: grid; gap: 16px; }
+    section { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:16px; }
+    h1 { font-size:1.3rem; margin:0; } h2 { font-size:1.05rem; margin:0 0 12px; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    form { display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    label { display:grid; gap:4px; font-size:.9rem; color:var(--mut); }
+    input { padding:9px 10px; border:1px solid var(--bd); border-radius:6px; background:var(--bg); color:var(--txt); font:inherit; }
+    button { padding:9px 14px; border:0; border-radius:6px; background:var(--pri); color:var(--on-pri); font:inherit; cursor:pointer; }
+    button.sec { background:transparent; color:var(--pri); border:1px solid var(--pri); }
+    button.perigo { background:var(--err); color:var(--on-err); }
+    form button { align-self:end; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:8px; border-bottom:1px solid var(--bd); vertical-align:top; }
+    td.acoes { display:flex; gap:6px; flex-wrap:wrap; }
+    .avisos { position:sticky; top:8px; z-index:10; min-height:2.5rem; }
+    .aviso { margin:0; padding:6px 12px; border:1px solid var(--bd); border-radius:8px; background:var(--card); }
+    .aviso:empty { padding:0; border:0; background:none; }
+    .aviso.erro { color:var(--err); border-color:var(--err); }
+    .aviso.ok { color:var(--ok); border-color:var(--ok); }
+    .titulo { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+    .titulo h2 { margin:0; }
+    .so-leitor { position:absolute; width:1px; height:1px; margin:-1px; padding:0; border:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .scroll { overflow-x:auto; }
+    .paginacao { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; color:var(--mut); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    [hidden] { display:none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Cadastro de Pessoas</h1>
+    <button id="sair" class="sec" hidden>Sair</button>
+  </header>
+
+  <section id="telaLogin">
+    <h2>Entrar</h2>
+    <form id="formLogin">
+      <label>Usuário <input name="usuario" autocomplete="username" required></label>
+      <label>Senha <input name="senha" type="password" autocomplete="current-password" required></label>
+      <button>Entrar</button>
+    </form>
+  </section>
+
+  <div id="telaApp" hidden style="display:grid; gap:16px">
+    <section>
+      <h2>Cadastrar pessoa</h2>
+      <form id="formPessoa">
+        <label>CPF <input name="documento" inputmode="numeric" maxlength="14" placeholder="529.982.247-25" required></label>
+        <label>Nome <input name="nome" maxlength="100" required></label>
+        <label>Sobrenome <input name="sobrenome" maxlength="100" required></label>
+        <label>E-mail <input name="email" type="email" maxlength="255" required></label>
+        <button>Cadastrar</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Buscar por CPF</h2>
+      <form id="formBusca">
+        <label>CPF <input name="documento" inputmode="numeric" maxlength="14" required></label>
+        <button>Buscar</button>
+        <button id="limparBusca" class="sec" type="button">Limpar</button>
+      </form>
+    </section>
+
+    <div id="avisos" class="avisos">
+      <p id="aviso" class="aviso ok" role="status"></p>
+      <p id="erro" class="aviso erro" role="alert"></p>
+    </div>
+
+    <section>
+      <div class="titulo"><h2>Pessoas cadastradas</h2><button id="recarregar" class="sec" type="button">Atualizar</button></div>
+      <div class="scroll">
+        <table>
+          <caption class="so-leitor">Pessoas cadastradas</caption>
+          <thead><tr><th>CPF</th><th>Nome</th><th>E-mail</th><th>Nacionalidade</th><th>Ações</th></tr></thead>
+          <tbody id="linhas"></tbody>
+        </table>
+      </div>
+      <nav class="paginacao" aria-label="Paginação">
+        <button id="anterior" class="sec" type="button">Anterior</button>
+        <span id="posicao" aria-live="polite"></span>
+        <button id="proxima" class="sec" type="button">Próxima</button>
+      </nav>
+    </section>
+  </div>
+</main>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const TAMANHO = 10;
+  const ROTULOS = { documento: 'CPF', nome: 'Nome', sobrenome: 'Sobrenome', email: 'E-mail', usuario: 'Usuário', senha: 'Senha', pagina: 'Página', tamanho: 'Tamanho' };
+  const nacionalidades = new Map(); // CPF (11 dígitos) -> texto já formatado; vale só enquanto a página está aberta
+  let paginaAtual = 1;
+  let busca = null; // CPF (11 dígitos) da busca ativa; null = lista paginada
+  let token = null;
+  try { token = sessionStorage.getItem('token'); } catch (_) {}
+
+  // sucesso em #aviso (role=status), erro em #erro (role=alert); o outro fica vazio
+  function aviso(texto, ok = false) {
+    $('#aviso').textContent = ok ? texto : '';
+    $('#erro').textContent = ok ? '' : texto;
+  }
+
+  function mensagemDe(corpo, status) {
+    if (corpo && corpo.erros) return Object.entries(corpo.erros).map(([k, v]) => (ROTULOS[k] || k) + ': ' + v).join('; ');
+    return (corpo && (corpo.detail || corpo.title)) || ('Erro ' + status);
+  }
+
+  // desabilita o botão enquanto a ação roda: segundo clique/Enter durante a requisição não faz nada
+  async function ocupado(botao, acao) {
+    if (botao.disabled) return;
+    botao.disabled = true;
+    try { await acao(); } finally { botao.disabled = false; }
+  }
+  const botaoDe = (ev) => ev.submitter || ev.target.querySelector('button');
+
+  function mascara(d) {
+    const [a, b, c, e] = [d.slice(0, 3), d.slice(3, 6), d.slice(6, 9), d.slice(9, 11)];
+    return a + (b ? '.' + b : '') + (c ? '.' + c : '') + (e ? '-' + e : '');
+  }
+  const formatarCpf = (v) => /^\d{11}$/.test(v) ? mascara(v) : v;
+
+  function sairDaBusca() { busca = null; $('#formBusca').reset(); }
+
+  async function api(caminho, opcoes = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    const r = await fetch(caminho, { ...opcoes, headers });
+    if (r.status === 401 && caminho !== '/api/v1/auth/login') { sair(); throw new Error('Sessão expirada. Entre novamente.'); }
+    if (r.status === 204) return null;
+    const corpo = await r.json().catch(() => null);
+    if (!r.ok) { const erro = new Error(mensagemDe(corpo, r.status)); erro.status = r.status; throw erro; }
+    return corpo;
+  }
+
+  function tela() {
+    const logado = Boolean(token);
+    $('#telaLogin').hidden = logado;
+    $('#telaApp').hidden = !logado;
+    $('#sair').hidden = !logado;
+    // as mensagens ficam logo abaixo da busca (ou do login, enquanto a busca não existe)
+    (logado ? $('#formBusca').closest('section') : $('#telaLogin')).after($('#avisos'));
+    if (logado) carregar();
+  }
+
+  function sair() {
+    token = null;
+    paginaAtual = 1;
+    nacionalidades.clear();
+    sairDaBusca();
+    aviso(''); // não deixa a mensagem da sessão anterior na tela de login (quem chama por 401 mostra a sua depois)
+    try { sessionStorage.removeItem('token'); } catch (_) {}
+    tela();
+    $('#formLogin [name=usuario]').focus();
+  }
+
+  function dadosDe(form) { return Object.fromEntries(new FormData(form)); }
+
+  async function carregar() {
+    try {
+      if (busca) return await carregarBusca();
+      const pagina = await api('/api/v1/pessoas?pagina=' + paginaAtual + '&tamanho=' + TAMANHO);
+      // excluiu o último item da página: volta para a última que ainda existe
+      if (pagina.itens.length === 0 && paginaAtual > 1) { paginaAtual = Math.max(1, pagina.totalPaginas); return carregar(); }
+      const pessoas = pagina.itens;
+      $('#posicao').textContent = pagina.totalItens === 0 ? 'Nenhuma pessoa cadastrada'
+        : 'Página ' + pagina.pagina + ' de ' + pagina.totalPaginas + ' · ' + pagina.totalItens + (pagina.totalItens === 1 ? ' pessoa' : ' pessoas');
+      $('#anterior').disabled = pagina.pagina <= 1;
+      $('#proxima').disabled = pagina.pagina >= pagina.totalPaginas;
+      desenhar(pessoas);
+    } catch (e) { aviso(e.message); }
+  }
+
+  // modo busca: só a pessoa localizada; sem resultado, tabela vazia e a mensagem do servidor em #erro
+  async function carregarBusca() {
+    $('#anterior').disabled = true;
+    $('#proxima').disabled = true;
+    try {
+      const p = await api('/api/v1/pessoas/' + encodeURIComponent(busca));
+      $('#posicao').textContent = 'Resultado da busca por CPF ' + formatarCpf(busca);
+      desenhar([p]);
+    } catch (e) {
+      $('#posicao').textContent = 'Sem resultado para a busca por CPF ' + formatarCpf(busca);
+      desenhar([]);
+      throw e;
+    }
+  }
+
+  function desenhar(pessoas) {
+    const tbody = $('#linhas');
+    tbody.replaceChildren();
+    for (const p of pessoas) {
+      const nome = p.nome + ' ' + p.sobrenome;
+      const tr = document.createElement('tr');
+      for (const v of [formatarCpf(p.documento), nome, p.email]) {
+        const td = document.createElement('td'); td.textContent = v; tr.append(td);
+      }
+      const nac = document.createElement('td');
+      if (nacionalidades.has(p.documento)) nac.textContent = nacionalidades.get(p.documento);
+      else {
+        const con = document.createElement('button'); con.className = 'sec'; con.textContent = 'Consultar';
+        con.setAttribute('aria-label', 'Consultar nacionalidade de ' + nome);
+        con.onclick = () => ocupado(con, () => consultar(p, nac));
+        nac.append(con);
+      }
+      const acoes = document.createElement('td'); acoes.className = 'acoes';
+      const del = document.createElement('button'); del.className = 'perigo'; del.textContent = 'Excluir';
+      del.setAttribute('aria-label', 'Excluir ' + nome);
+      del.onclick = () => ocupado(del, () => excluir(p));
+      acoes.append(del); tr.append(nac, acoes); tbody.append(tr);
+    }
+  }
+
+  async function consultar(p, celula) {
+    aviso('');
+    try {
+      const n = await api('/api/v1/pessoas/' + encodeURIComponent(p.documento) + '/nacionalidade');
+      const texto = n.nomePais + ' (' + n.paisIso + ') · ' + Math.round(n.probabilidade * 100) + '%';
+      nacionalidades.set(p.documento, texto);
+      celula.textContent = texto;
+    } catch (e) { aviso(e.message); }
+  }
+
+  async function excluir(p) {
+    if (!confirm('Excluir ' + p.nome + ' ' + p.sobrenome + '?')) return;
+    try {
+      await api('/api/v1/pessoas/' + encodeURIComponent(p.documento), { method: 'DELETE' });
+      nacionalidades.delete(p.documento);
+      sairDaBusca();
+      aviso('Pessoa excluída.', true); carregar();
+    } catch (e) { aviso(e.message); }
+  }
+
+  $('#formLogin').onsubmit = (ev) => {
+    ev.preventDefault();
+    return ocupado(botaoDe(ev), async () => {
+      aviso('');
+      try {
+        const r = await api('/api/v1/auth/login', { method: 'POST', body: JSON.stringify(dadosDe(ev.target)) });
+        token = r.token;
+        try { sessionStorage.setItem('token', token); } catch (_) {}
+        ev.target.reset(); tela();
+        $('#formPessoa [name=documento]').focus();
+      } catch (e) { aviso(e.message); }
+    });
+  };
+
+  $('#formPessoa').onsubmit = (ev) => {
+    ev.preventDefault();
+    return ocupado(botaoDe(ev), async () => {
+      aviso('');
+      try { await api('/api/v1/pessoas', { method: 'POST', body: JSON.stringify(dadosDe(ev.target)) }); ev.target.reset(); sairDaBusca(); aviso('Pessoa cadastrada.', true); carregar(); }
+      catch (e) { aviso(e.message); }
+    });
+  };
+
+  $('#formBusca').onsubmit = (ev) => {
+    ev.preventDefault();
+    return ocupado(botaoDe(ev), async () => {
+      aviso('');
+      busca = dadosDe(ev.target).documento.replace(/\D/g, '') || null;
+      await carregar();
+    });
+  };
+
+  $('#limparBusca').onclick = () => { sairDaBusca(); aviso(''); carregar(); };
+
+  for (const campo of document.querySelectorAll('input[name=documento]')) {
+    // ponytail: reformatar no meio do texto leva o cursor ao fim; aceitável para CPF digitado em sequência
+    campo.addEventListener('input', () => { campo.value = mascara(campo.value.replace(/\D/g, '').slice(0, 11)); });
+  }
+
+  $('#anterior').onclick = () => { paginaAtual--; carregar(); };
+  $('#proxima').onclick = () => { paginaAtual++; carregar(); };
+  $('#recarregar').onclick = carregar;
+  $('#sair').onclick = sair;
+  tela();
+</script>
+</body>
+</html>
