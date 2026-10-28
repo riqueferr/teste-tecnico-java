@@ -1,0 +1,49 @@
+# Build (Maven)
+target/
+*.class
+dependency-reduced-pom.xml
+.flattened-pom.xml
+release.properties
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
+# Segredos e config local (só o .env.example é versionado)
+#.env
+#.env.*
+.env.example
+docker-compose.override.yml
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+.springBeans
+nbproject/
+out/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs, dumps da JVM e temporários
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+*.hprof
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak

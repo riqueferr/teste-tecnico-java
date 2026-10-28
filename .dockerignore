@@ -1,0 +1,57 @@
+# O Dockerfile só usa pom.xml, lombok.config e src/: tudo o mais fica fora do contexto de build.
+
+# Controle de versão
+.git/
+.gitignore
+.gitattributes
+
+# Build local (o jar é gerado dentro da imagem)
+target/
+*.class
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# Segredos e config local (nunca entram na imagem; o Compose injeta pelo env_file do host)
+.env
+.env.*
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Wrapper do Maven e documentação
+.mvn/
+mvnw
+mvnw.cmd
+docs/
+README.md
+CLAUDE.md
+CLAUDE.local.md
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+nbproject/
+out/
+
+# Sistema operacional e temporários
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
